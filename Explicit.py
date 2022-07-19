@@ -9,6 +9,10 @@ class Explicit:
         self.delta_e = 0.02
         self.gamma = 1
         self.lam = 5
+        self.category_a = 1
+        self.category_b = 2
+        self.ci = 22.5 #just for RB_triangle_v1
+        self.epsilon = 0 
 
         self.prev_rule_index = None
         # when starting out, rule Ri is randomly chosen
@@ -18,16 +22,21 @@ class Explicit:
         # initially, all salience is set to 0.25, assuming binary rules
         self.saliences = np.full(len(self.rules), 0.25)
         self.weights = np.zeros(len(self.rules))
+        self.output = []
 
     def poisson_dist(self):
         return np.random.poisson(lam=self.lam)
 
-    def normal_dist(self):
-        return np.random.normal()  # TODO
+
+    def discriminant(self):
+        [_, *features] = self.trials[self.current_rule_index - 1]
+        return map( lambda x : x - self.ci, features)
+
 
     def predict(self):
-        # TODO
-        pass
+        return all(x < self.epsilon for x in self.discriminant())
+        
+
 
     # should only be called in n => 2
     def update_salience(self):
@@ -44,6 +53,7 @@ class Explicit:
             if self.n >= 2:
                 self.update_salience()
             pred_category = self.predict()
+            self.output.append([pred_category, self.current_rule_index])
             if (self.trials[self.n - 1][0] == pred_category):
                 self.prev_rule_index = self.current_rule_index  # same rule used
             else:
@@ -68,3 +78,4 @@ class Explicit:
                 next_rule = np.argmax(next_prob_dist)
                 self.current_rule_index = next_rule
             self.prev_prediction = pred_category
+        # print(self.output)
