@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Explicit:
@@ -11,8 +12,6 @@ class Explicit:
         self.lam = 5
         self.category_a = 1
         self.category_b = 2
-        self.ci = 22.5 #just for RB_triangle_v1
-        self.epsilon = 0 
 
         self.prev_rule_index = None
         # when starting out, rule Ri is randomly chosen
@@ -29,10 +28,9 @@ class Explicit:
 
     def predict(self):
         return self.rules[self.current_rule_index](self.trials[self.n - 1])
-        
-
 
     # should only be called in n => 2
+
     def update_salience(self):
         assert self.n >= 2, "Salience updating should only occur on trial 2 an onwards"
         # correct previous category, given by trials
@@ -65,14 +63,46 @@ class Explicit:
 
                 # calculating p_n+1 for rule k
                 sum_salience = np.sum(self.saliences)
-                next_prob_dist = self.saliences / sum_salience #TODO: the update rule is not 100% accurate
+                # TODO: the update rule is not 100% accurate
+                next_prob_dist = self.saliences / sum_salience
 
                 # not sure about this part, but I choose the max of all probabilities
                 self.prev_rule_index = self.current_rule_index
                 next_rule = np.argmax(next_prob_dist)
                 self.current_rule_index = next_rule
             self.prev_prediction = pred_category
-            self.n = self.n + 1
+            self.n += 1
     
-    def generate_output():
-        pass
+
+
+    def generate_output(self, txt_file_path, batch_size=50):
+        #saving output to txt file
+        output = np.append(self.trials, self.output, 1)
+        np.savetxt(txt_file_path, output, fmt='%1.3f')
+
+        #graphing learning rate
+        num_batch = int(len(output) / batch_size)
+        x = []
+        y = []
+        for i in range(num_batch):
+            batch = output[i : i + batch_size]
+            actual_categories = batch[:, 0]
+            predicted_categories= batch[:, 3]
+            num_incorrect = 0
+            for j,  predicted_category in enumerate(predicted_categories):
+                actual_category = actual_categories[j]
+                if predicted_category != actual_category:
+                    num_incorrect += 1
+            x.append(i)
+            y.append(num_incorrect / batch_size)
+        
+
+            
+        
+        
+        plt.plot(x, y)
+        plt.xlabel("Batch")  # add X-axis label
+        plt.ylabel("Accuracy")  # add Y-axis label
+        plt.title("Learning Curve of Each Batch and its Accuracy")  # add title
+        plt.xticks(np.arange(len(x)))
+        plt.show()
