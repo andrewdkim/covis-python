@@ -27,14 +27,8 @@ class Explicit:
     def poisson_dist(self):
         return np.random.poisson(lam=self.lam)
 
-
-    def discriminant(self):
-        [_, *features] = self.trials[self.current_rule_index - 1]
-        return map( lambda x : x - self.ci, features)
-
-
     def predict(self):
-        return all(x < self.epsilon for x in self.discriminant())
+        return self.rules[self.current_rule_index](self.trials[self.n - 1])
         
 
 
@@ -78,4 +72,7 @@ class Explicit:
                 next_rule = np.argmax(next_prob_dist)
                 self.current_rule_index = next_rule
             self.prev_prediction = pred_category
-        # print(self.output)
+            self.n = self.n + 1
+    
+    def generate_output():
+        pass
