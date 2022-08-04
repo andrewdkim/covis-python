@@ -91,13 +91,14 @@ class Explicit:
             batch = output[i : i + batch_size]
             actual_categories = batch[:, 0]
             predicted_categories= batch[:, 3]
-            num_incorrect = 0
+        
+            num_correct = 0
             for j,  predicted_category in enumerate(predicted_categories):
                 actual_category = actual_categories[j]
-                if predicted_category != actual_category:
-                    num_incorrect += 1
+                if predicted_category == actual_category:
+                    num_correct += 1
             x.append(i)
-            y.append(num_incorrect / batch_size)
+            y.append(num_correct / batch_size)
         
 
             
