@@ -22,6 +22,7 @@ class Explicit:
         self.saliences = np.full(len(self.rules), 0.25)
         self.weights = np.zeros(len(self.rules))
         self.output = []
+        self.output_saliences = []
 
     def poisson_dist(self):
         return np.random.poisson(lam=self.lam)
@@ -46,6 +47,7 @@ class Explicit:
                 self.update_salience()
             pred_category = self.predict()
             self.output.append([pred_category, self.current_rule_index])
+            self.output_saliences.append(self.saliences)
             if (self.trials[self.n - 1][0] == pred_category):
                 self.prev_rule_index = self.current_rule_index  # same rule used
             else:
@@ -79,6 +81,7 @@ class Explicit:
         #saving output to txt file
         output = np.append(self.trials, self.output, 1)
         np.savetxt(txt_file_path, output, fmt='%1.3f')
+        np.savetxt("output/saliences.txt", self.output_saliences, fmt='%1.3f')
 
         #graphing learning rate
         num_batch = int(len(output) / batch_size)
