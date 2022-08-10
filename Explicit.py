@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from random import choice
+
 
 
 class Explicit:
@@ -35,7 +37,7 @@ class Explicit:
     def update_salience(self):
         assert self.n >= 2, "Salience updating should only occur on trial 2 an onwards"
         # correct previous category, given by trials
-        prev_category = self.trials[self.n - 2][0]
+        prev_category = int(self.trials[self.n - 2][0])
         if (self.prev_prediction == prev_category):
             self.saliences[self.current_rule_index] = self.saliences[self.prev_rule_index] + self.delta_c
         else:
@@ -55,7 +57,7 @@ class Explicit:
                 ri_weight = self.saliences[self.current_rule_index] + self.gamma
 
                 # choose rule at random Rj
-                rj_index = np.random.randint(0, len(self.rules))
+                rj_index =  choice([i for i in range(0,len(self.rules)) if i not in [self.current_rule_index]])
                 rj_weight = self.saliences[rj_index] + self.poisson_dist()
 
                 # set other weights equal to saliences
@@ -65,12 +67,17 @@ class Explicit:
 
                 # calculating p_n+1 for rule k
                 sum_salience = np.sum(self.saliences)
-                # TODO: the update rule is not 100% accurate
+
                 next_prob_dist = self.saliences / sum_salience
 
-                # not sure about this part, but I choose the max of all probabilities
                 self.prev_rule_index = self.current_rule_index
-                next_rule = np.argmax(next_prob_dist)
+
+                #select next rule EXCEPT ri and rj
+                blackList = [self.current_rule_index, rj_index]
+                mask = np.zeros(next_prob_dist.size, dtype = bool)
+                mask[blackList] = True
+                whiteList = np.ma.array(next_prob_dist, mask=mask)
+                next_rule = np.argmax(whiteList)
                 self.current_rule_index = next_rule
             self.prev_prediction = pred_category
             self.n += 1
