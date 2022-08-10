@@ -49,7 +49,7 @@ class Explicit:
                 self.update_salience()
             pred_category = self.predict()
             self.output.append([pred_category, self.current_rule_index])
-            self.output_saliences.append(self.saliences)
+            self.output_saliences.append(np.copy(self.saliences))
             if (self.trials[self.n - 1][0] == pred_category):
                 self.prev_rule_index = self.current_rule_index  # same rule used
             else:
@@ -84,11 +84,11 @@ class Explicit:
     
 
 
-    def generate_output(self, txt_file_path, batch_size=50):
+    def generate_output(self, txt_file_path, salience_file_path, batch_size=50):
         #saving output to txt file
         output = np.append(self.trials, self.output, 1)
         np.savetxt(txt_file_path, output, fmt='%1.3f')
-        np.savetxt("output/saliences.txt", self.output_saliences, fmt='%1.3f')
+        np.savetxt(salience_file_path, self.output_saliences, fmt='%1.3f')
 
         #graphing learning rate
         num_batch = int(len(output) / batch_size)
