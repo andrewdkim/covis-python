@@ -5,15 +5,15 @@ from random import choice
 
 
 class Explicit:
-    def __init__(self, trials, rules) -> None:
+    def __init__(self, trials, rules, delta_c = 0.0025, delta_e = 0.02, gamma = 1, lam = 5, category_a = 1, category_b = 2) -> None:
         self.rules = rules
         self.trials = trials
-        self.delta_c = 0.0025
-        self.delta_e = 0.02
-        self.gamma = 1
-        self.lam = 5
-        self.category_a = 1
-        self.category_b = 2
+        self.delta_c = delta_c
+        self.delta_e = delta_e
+        self.gamma = gamma
+        self.lam = lam
+        self.category_a = category_a
+        self.category_b = category_b
 
         self.prev_rule_index = None
         # when starting out, rule Ri is randomly chosen
@@ -48,6 +48,7 @@ class Explicit:
             if self.n >= 2:
                 self.update_salience()
             pred_category = self.predict()
+         
             self.output.append([pred_category, self.current_rule_index])
             self.output_saliences.append(np.copy(self.saliences))
             if (self.trials[self.n - 1][0] == pred_category):
@@ -61,7 +62,7 @@ class Explicit:
                 rj_weight = self.saliences[rj_index] + self.poisson_dist()
 
                 # set other weights equal to saliences
-                self.weights = self.saliences
+                self.weights = np.copy(self.saliences)
                 self.weights[self.current_rule_index] = ri_weight
                 self.weights[rj_index] = rj_weight
 
@@ -106,14 +107,24 @@ class Explicit:
                     num_correct += 1
             x.append(i)
             y.append(num_correct / batch_size)
-        
 
-            
-        
-        
         plt.plot(x, y)
         plt.xlabel("Batch")  # add X-axis label
         plt.ylabel("Accuracy")  # add Y-axis label
         plt.title("Learning Curve of Each Batch and its Accuracy")  # add title
         plt.xticks(np.arange(len(x)))
         plt.show()
+
+
+    def get_trials_to_criterion(self, threshold: int):
+        output = np.append(self.trials, self.output, 1)
+        seq_trials = 0
+        for i, output_row in enumerate(output):
+            true_category, _, _, pred_category, _ = output_row
+            if true_category == pred_category:
+                seq_trials += 1
+                if seq_trials == threshold:
+                    return i + 1 
+            else:
+                seq_trials = 0
+        return 0
