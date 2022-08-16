@@ -39,9 +39,10 @@ class Explicit:
         # correct previous category, given by trials
         prev_category = int(self.trials[self.n - 2][0])
         if (self.prev_prediction == prev_category):
-            self.saliences[self.current_rule_index] = self.saliences[self.prev_rule_index] + self.delta_c
+            self.saliences[self.prev_rule_index] = self.saliences[self.prev_rule_index] + self.delta_c
         else:
-            self.saliences[self.current_rule_index] = self.saliences[self.prev_rule_index] - self.delta_e
+            print(self.delta_e)
+            self.saliences[self.prev_rule_index] = self.saliences[self.prev_rule_index] - self.delta_e
 
     def run_trials(self):
         for i in range(len(self.trials)):
