@@ -18,11 +18,6 @@ class Procedural:
         self.w_max = 1
         self.sigma_p = 0.0125
 
-        self.prev_predicted_reward = 0  # initially, p_0 = 0
-        self.prev_obtained_reward = 0
-        self.weights = self.initial_weight()
-        self.prev_striatal_activations = []
-        self.prev_sensory_activations = []
         self.n = 1  # current trial
 
         self.category_a = category_a
@@ -30,6 +25,13 @@ class Procedural:
 
         self.num_striatal = 2
         self.num_sensory = 10000
+
+
+        self.prev_predicted_reward = 0  # initially, p_0 = 0
+        self.prev_obtained_reward = 0
+        self.weights = self.initial_weight()
+        self.prev_striatal_activations = []
+        self.prev_sensory_activations = []
 
     def calc_obtained_reward(self):
         pass
@@ -46,11 +48,13 @@ class Procedural:
         return 0
 
     def sensory_activation(self, k):
-        print(k)
-        row = int(k / (10))
-        col = int(k % 10)
-        print(row, col)
+        row = int(k / 100) + 1
+        col = int(k % 100)
+        if k % 100 == 0:
+            return row - 1, 100
+        return row, col
 
+    
     def striatal_activation(self, j):
         pass
 
@@ -76,4 +80,6 @@ class Procedural:
         return weights
 
     def run_trials(self):
-        pass
+        for i in range(1, self.num_sensory + 1):
+            print(i)
+            print(self.sensory_activation(i))
