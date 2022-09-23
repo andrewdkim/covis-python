@@ -1,3 +1,4 @@
+from math import exp
 import random
 from time import time
 import numpy as np
@@ -26,7 +27,6 @@ class Procedural:
         self.num_striatal = 2
         self.num_sensory = 10000
 
-
         self.prev_predicted_reward = 0  # initially, p_0 = 0
         self.prev_obtained_reward = 0
         self.weights = self.initial_weight()
@@ -38,6 +38,9 @@ class Procedural:
 
     def calc_predicted_reward(self):
         return self.prev_predicted_reward + 0.025 * (self.prev_obtained_reward - self.prev_predicted_reward)
+
+    def curr_trial(self):
+        return self.trials[self.n - 1]
 
     def dopamine(self):
         rpe = self.calc_obtained_reward() + self.calc_predicted_reward()
@@ -51,12 +54,21 @@ class Procedural:
         row = int(k / 100) + 1
         col = int(k % 100)
         if k % 100 == 0:
-            return row - 1, 100
-        return row, col
+            row = row - 1
+            col = 100
+        sti1, sti2 = self.curr_trial()[1], self.curr_trial()[2]
+        dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([row, col]))
+        return exp((dist ** 2) / self.alpha)
 
-    
+    # j >= 1
+
     def striatal_activation(self, j):
-        pass
+        striatal_sum = 0
+        for k in range(1, self.num_sensory):
+            print(k)
+            striatal_sum += self.weights[k - 1][j - 1] * self.sensory_activation(
+                k) + np.random.normal(0, self.sigma_p ** 2)
+        return striatal_sum
 
     def initial_weight(self):
         def init_weight_fn(): return 0.001 + 0.0025 * random.uniform(0, 1)
@@ -68,18 +80,19 @@ class Procedural:
 
     def next_weight(self, curr_weight):
         weights = np.zeros((self.num_sensory, self.num_striatal))
-        for k in range(self.num_sensory):
-            for j in range(self.num_striatal):
-                weights[k][j] = curr_weight[k][j]
+        for k in range(1, self.num_sensory):
+            for j in range(1, self.num_striatal):
+                weights[k - 1][j - 1] = curr_weight[k - 1][j - 1]
                 + self.alpha_w * self.sensory_activation(k) * max((self.striatal_activation(j) - self.theta_nmda), 0) * max(
-                    self.dopamine() - self.base_dopamine, 0) * (self.w_max - curr_weight[k][j])
+                    self.dopamine() - self.base_dopamine, 0) * (self.w_max - curr_weight[k - 1][j - 1])
                 - self.beta_w * self.sensory_activation(k) * max(self.striatal_activation(
-                    j) - self.theta_nmda, 0) * max(self.base_dopamine - self.dopamine()) * curr_weight[k][j]
+                    j) - self.theta_nmda, 0) * max(self.base_dopamine - self.dopamine()) * curr_weight[k - 1][j - 1]
                 - self.gamma_w * self.sensory_activation(k) * max(max(
-                    self.theta_nmda - self.striatal_activation(j), 0) - self.theta_ampa, 0) * curr_weight[k][j]
+                    self.theta_nmda - self.striatal_activation(j), 0) - self.theta_ampa, 0) * curr_weight[k - 1][j - 1]
         return weights
 
+    def make_decision(self):
+        return self.category_a if self.striatal_activation(self.category_a) > self.striatal_activation(self.category_b) else self.category_b
+
     def run_trials(self):
-        for i in range(1, self.num_sensory + 1):
-            print(i)
-            print(self.sensory_activation(i))
+        print(self.striatal_activation(1))
