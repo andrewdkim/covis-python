@@ -31,7 +31,9 @@ def generate_criterion_graph(control_trial, dual_trial):
 def main():
     data = open_data("data/RB_triangle_v1_large.txt")
     procedural_model = Procedural(data)
+    procedural_model.rescale_trials_RB_triangle()
     procedural_model.run_trials()
+    procedural_model.generate_output("output/procedural_output.txt")
 #   criterion_threshold = 8
 #   explicit_control= Explicit(data, [spatial, spatial_and_orientation, orientation])
 #   explicit_control.run_trials()
