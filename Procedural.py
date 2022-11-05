@@ -4,6 +4,7 @@ from time import time
 import numpy as np
 import matplotlib.pyplot as plt
 from random import choice
+from itertools import product
 
 
 class Procedural:
@@ -26,21 +27,18 @@ class Procedural:
 
         self.num_striatal = 2
         self.num_sensory = 10000
+        self.sensory_coordinates = list(product(range(1, 101), range(1, 101)))
 
         self.prev_predicted_reward = 0  # initially, p_0 = 0
         self.prev_obtained_reward = 0
         self.weights = self.initial_weight()
         self.predicted_category = None
-        self.prev_striatal_activations = []
-        self.prev_sensory_activations = []
 
         self.output = []
 
     def rescale_trials_RB_triangle(self):
         orientation = self.trials[:, 1] # "x"
         spatial = self.trials[:, 2] # "y"
-        plt.scatter(orientation, spatial)
-        plt.show()
         min_orientation = abs(min(orientation))
         min_spatial = abs(min(spatial))
         padding = 5
@@ -52,15 +50,16 @@ class Procedural:
         spatial = plane[:, 1]
         orientation = [x + padding for x in orientation]
         spatial = [y + padding for y in spatial]
-        plt.scatter(orientation, spatial)
-        plt.show()
         self.trials = np.column_stack((self.trials[:, 0], orientation, spatial))
 
     def curr_trial(self):
         return self.trials[self.n - 1]
+    
+    def curr_trial_category(self):
+        return int(self.curr_trial()[0])
 
     def obtained_reward(self):
-        actual_category = int(self.curr_trial()[0])
+        actual_category = self.curr_trial_category()
         predicted_category = self.predicted_category
         if actual_category == predicted_category:
             return 1
@@ -72,8 +71,9 @@ class Procedural:
     def predicted_reward(self):
         return self.prev_predicted_reward + 0.025 * (self.prev_obtained_reward - self.prev_predicted_reward)
 
-    def dopamine(self):
-        rpe = self.obtained_reward() + self.predicted_reward()
+    def dopamine(self, obtained_reward, predicted_reward):
+        rpe = obtained_reward - predicted_reward
+        print("rpe: " + str(rpe))
         if rpe > 1:
             return 1
         elif -0.25 < rpe and rpe <= 1:
@@ -81,20 +81,16 @@ class Procedural:
         return 0
 
     def sensory_activation(self, k):
-        row = int(k / 100) + 1
-        col = int(k % 100)
-        if k % 100 == 0:
-            row = row - 1
-            col = 100
+        row, col = self.sensory_coordinates[k - 1]
         sti1, sti2 = self.curr_trial()[1], self.curr_trial()[2]
         dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([row, col]))
         return exp(-(dist ** 2) / self.alpha)
 
     def striatal_activation(self, j):
         striatal_sum = 0
-        for k in range(1, self.num_sensory):
-            striatal_sum += self.weights[k - 1][j - 1] * self.sensory_activation(
-                k) + np.random.normal(0, self.sigma_p ** 2)
+        for k in range(1, self.num_sensory + 1):
+            w_kj = self.weights[k - 1][j - 1]
+            striatal_sum += (w_kj * self.sensory_activation(k) + np.random.normal(0, self.sigma_p))
         return striatal_sum
 
     def initial_weight(self):
@@ -105,31 +101,57 @@ class Procedural:
                 weights[i][j] = init_weight_fn()
         return weights
 
-    def next_weight(self, curr_weight, s_a, s_b):
-        weights = np.zeros((self.num_sensory, self.num_striatal))
+    def next_weight(self, curr_weight, s_a, s_b, dopamine):
+        new_weights = np.zeros((self.num_sensory, self.num_striatal))
         striatal_activations = [s_a, s_b]
-        d_n = self.dopamine()
-        for k in range(1, self.num_sensory):
+        d_n = dopamine
+        for k in range(1, self.num_sensory + 1): # 1, 2, ... 10000
             i_k = self.sensory_activation(k)
-            for j, s_j in enumerate(striatal_activations):
-                weights[k - 1][j - 1] = curr_weight[k - 1][j - 1]
-                + self.alpha_w * i_k * max((s_j - self.theta_nmda), 0) * max(d_n - self.base_dopamine, 0) * (self.w_max - curr_weight[k - 1][j - 1])
-                - self.beta_w * i_k * max(s_j - self.theta_nmda, 0) * max(self.base_dopamine - d_n, 0) * curr_weight[k - 1][j - 1]
-                - self.gamma_w * i_k * max(max(self.theta_nmda - s_j, 0) - self.theta_ampa, 0) * curr_weight[k - 1][j - 1]
-        return weights
+            for j in range(1, self.num_striatal + 1): # 1, 2
+                s_j = striatal_activations[j - 1]
+                curr_w_kj = curr_weight[k - 1][j - 1]
+                first_term = self.alpha_w * i_k * max(s_j - self.theta_nmda, 0) * max(d_n - self.base_dopamine, 0) * (self.w_max - curr_w_kj)
+                second_term = self.beta_w * i_k * max(s_j - self.theta_nmda, 0) * max(self.base_dopamine - d_n, 0) * curr_w_kj
+                third_term = self.gamma_w * i_k * max(max(self.theta_nmda - s_j, 0) - self.theta_ampa, 0) * curr_w_kj
+
+                new_weight = curr_w_kj + first_term - second_term - third_term
+                if new_weight <= 0:
+                    new_weight = 0
+                elif new_weight >= 1:
+                    new_weight = 1
+                new_weights[k - 1][j - 1] = new_weight
+        return new_weights
 
     def make_decision(self, s_a, s_b):
         return self.category_a if s_a > s_b else self.category_b
 
     def run_trials(self):
         for i, _ in enumerate(self.trials):
+            if i % 100 == 0:
+                print(str(i) + "th iteration")
+                self.generate_heatmap(self.weights[:, 0].reshape((100, 100)))
             s_a = self.striatal_activation(self.category_a)
             s_b = self.striatal_activation(self.category_b)
-            self.predicted_category = self.make_decision(s_a, s_b)
-            self.weights = self.next_weight(self.weights, s_a, s_b)
+            # self.predicted_category = self.make_decision(s_a, s_b)
+            self.predicted_category = self.curr_trial_category() #TEST - always correct
+            obtained_reward = self.obtained_reward()
+            predicted_reward = self.predicted_reward()
+            dopamine = self.dopamine(obtained_reward, predicted_reward)
+            print("dopa: " + str(dopamine))
+
+            #prepare for next iteration
+            self.weights = self.next_weight(self.weights.copy(), s_a, s_b, dopamine).copy()
+            self.prev_obtained_reward = obtained_reward
+            self.prev_predicted_reward = predicted_reward
+            # print(self.prev_obtained_reward)
+            # print(self.prev_predicted_reward)
             self.n += 1
             self.output.append([self.predicted_category])
     
+    def generate_heatmap(self, arr):
+        plt.imshow(arr, cmap='viridis')
+        plt.colorbar()
+        plt.show()
     
     def generate_output(self, txt_file_path, batch_size=50):
         #saving output to txt file
