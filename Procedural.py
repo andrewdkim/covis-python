@@ -11,8 +11,8 @@ class Procedural:
     def __init__(self, trials, category_a=1, category_b=2) -> None:
         self.trials = trials
         self.base_dopamine = 0.20
-        self.alpha = 10
-        self.alpha_w = 0.65
+        self.alpha = 20
+        self.alpha_w = 0.33
         self.beta_w = 0.19
         self.gamma_w = 0.02
         self.theta_nmda = 0.0022
@@ -73,7 +73,6 @@ class Procedural:
 
     def dopamine(self, obtained_reward, predicted_reward):
         rpe = obtained_reward - predicted_reward
-        print("rpe: " + str(rpe))
         if rpe > 1:
             return 1
         elif -0.25 < rpe and rpe <= 1:
@@ -132,12 +131,11 @@ class Procedural:
                 self.generate_heatmap(self.weights[:, 0].reshape((100, 100)))
             s_a = self.striatal_activation(self.category_a)
             s_b = self.striatal_activation(self.category_b)
-            # self.predicted_category = self.make_decision(s_a, s_b)
-            self.predicted_category = self.curr_trial_category() #TEST - always correct
+            self.predicted_category = self.make_decision(s_a, s_b)
+            # self.predicted_category = self.curr_trial_category() #TEST - always correct
             obtained_reward = self.obtained_reward()
             predicted_reward = self.predicted_reward()
             dopamine = self.dopamine(obtained_reward, predicted_reward)
-            print("dopa: " + str(dopamine))
 
             #prepare for next iteration
             self.weights = self.next_weight(self.weights.copy(), s_a, s_b, dopamine).copy()
