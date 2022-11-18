@@ -11,10 +11,15 @@ class Procedural:
     def __init__(self, trials, category_a=1, category_b=2) -> None:
         self.trials = trials
         self.base_dopamine = 0.20
-        self.alpha = 20
-        self.alpha_w = 0.33
-        self.beta_w = 0.19
-        self.gamma_w = 0.02
+        self.alpha = 100
+        self.alpha_w = 0.0065
+        self.beta_w = 0.0019
+        self.gamma_w = 0.0002
+
+
+        #65 : 19 : 2
+        # 32.5 : 9.5 : 1
+
         self.theta_nmda = 0.0022
         self.theta_ampa = 0.01
         self.w_max = 1
@@ -150,7 +155,7 @@ class Procedural:
         plt.imshow(arr, cmap='viridis')
         plt.colorbar()
         plt.show()
-    
+
     def generate_output(self, txt_file_path, batch_size=50):
         #saving output to txt file
         output = np.append(self.trials, self.output, 1)
