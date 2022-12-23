@@ -2,6 +2,7 @@ from Explicit import Explicit
 from Procedural import Procedural
 import matplotlib.pyplot as plt
 import numpy as np
+from ExplicitRules import spatial_and_orientation, spatial, orientation
 
 
 
@@ -13,10 +14,13 @@ class COVIS:
         self.category_a = category_a
         self.category_b = category_b
         self.procedural_model = Procedural()
-        # self.explicit_model = Explicit()
+        self.explicit_model = Explicit([spatial, spatial_and_orientation, orientation])
         self.use_procedural = use_procedural
         self.use_explicit = use_explicit
         self.results = []
+
+        self.procedural_weight = 0.01
+        self.explicit_weight = 0.99
 
     def run_trials(self):
         for i, trial in enumerate(self.trials):
@@ -24,10 +28,29 @@ class COVIS:
             actual_result = int(trial[0])
             if self.use_procedural and self.use_explicit:
                 # competition between procedural and explicit
-                pass
+                explicit_prediction, explicit_confidence = self.explicit_model.run_trial(trial)
+                procedural_prediction, procedural_confidence, weight = self.procedural_model.run_trial(trial)
+                # TODO: need to normalize confidence
+
+                # make decision
+                if self.explicit_weight * explicit_confidence > self.procedural_weight * procedural_confidence:
+                    self.results.append([actual_result, explicit_prediction])
+                else:
+                    self.results.append([actual_result, procedural_prediction])
+                
+                if explicit_prediction == actual_result:
+                    # if explicit system gives correct response
+                    self.explicit_weight = self.explicit_weight + self.delta_oc * (1 - self.explicit_weight)
+                else:
+                    self.explicit_weight = self.explicit_weight - self.delta_oe * self.explicit_weight
+                self.procedural_weight = 1 - self.explicit_weight
+
             elif self.use_explicit:
-                pass
+                # use only explicit model
+                predicted_result = self.explicit_model.run_trial(trial)
+                self.results.append([actual_result, predicted_result])
             elif self.use_procedural:
+                # use only procedural model
                 predicted_result, confidence, weight = self.procedural_model.run_trial(trial)
                 self.results.append([actual_result, predicted_result])
     
