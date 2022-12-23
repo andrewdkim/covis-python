@@ -49,24 +49,24 @@ def rescale_trials_RB_triangle(trials):
 
 def main():
     trials = open_data("data/RB_triangle_v1_large.txt")
-    rescaled_trials = rescale_trials_RB_triangle(trials)
-    covis_model = COVIS(rescaled_trials, use_explicit = False, use_procedural = True)
-    covis_model.run_trials()
-    covis_model.visualize_batch_accuracy()
+    # rescaled_trials = rescale_trials_RB_triangle(trials)
+    # covis_model = COVIS(rescaled_trials, use_explicit = False, use_procedural = True)
+    # covis_model.run_trials()
+    # covis_model.visualize_batch_accuracy()
 
-#   criterion_threshold = 8
-#   explicit_control= Explicit(data, [spatial, spatial_and_orientation, orientation])
-#   explicit_control.run_trials()
-#   explicit_control.generate_output("output/explicit_control_output.txt", "output/explicit_control_saliences.txt")
-#   control_trial_to_criterion = explicit_control.get_trials_to_criterion(criterion_threshold)
+    criterion_threshold = 8
+    explicit_control= Explicit(trials, [spatial, spatial_and_orientation, orientation])
+    explicit_control.run_trials()
+    explicit_control.generate_output("output/explicit_control_output.txt", "output/explicit_control_saliences.txt")
+    control_trial_to_criterion = explicit_control.get_trials_to_criterion(criterion_threshold)
 
-#   explicit_dual= Explicit(data, gamma=20, lam=0.5, rules=[spatial, spatial_and_orientation, orientation])
-#   explicit_dual.run_trials()
-#   explicit_dual.generate_output("output/explicit_dual_output.txt", "output/explicit_dual_saliences.txt")
-#   dual_trial_to_criterion = explicit_dual.get_trials_to_criterion(criterion_threshold)
+    explicit_dual= Explicit(trials, gamma=20, lam=0.5, rules=[spatial, spatial_and_orientation, orientation])
+    explicit_dual.run_trials()
+    explicit_dual.generate_output("output/explicit_dual_output.txt", "output/explicit_dual_saliences.txt")
+    dual_trial_to_criterion = explicit_dual.get_trials_to_criterion(criterion_threshold)
 
-#   print(control_trial_to_criterion, dual_trial_to_criterion)
-#   generate_criterion_graph(control_trial_to_criterion, dual_trial_to_criterion)
+    print(control_trial_to_criterion, dual_trial_to_criterion)
+    generate_criterion_graph(control_trial_to_criterion, dual_trial_to_criterion)
 
 
 if __name__ == "__main__":
