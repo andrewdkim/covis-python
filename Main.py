@@ -49,8 +49,8 @@ def rescale_trials_RB_triangle(trials):
 
 def main():
     trials = open_data("data/RB_triangle_v1_large.txt")
-    # rescaled_trials = rescale_trials_RB_triangle(trials)
-    covis_model = COVIS(trials, use_explicit = True, use_procedural = False)
+    rescaled_trials = rescale_trials_RB_triangle(trials)
+    covis_model = COVIS(rescaled_trials)
     covis_model.run_trials()
     covis_model.visualize_batch_accuracy()
 

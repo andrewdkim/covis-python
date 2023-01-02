@@ -46,6 +46,7 @@ class Procedural:
         self.prev_obtained_reward = 0
         self.weights = self.initial_weight()
         self.predicted_category = None
+        self.max_confidence = -np.inf
 
     def obtained_reward(self):
         actual_category = self.actual_category
@@ -134,4 +135,5 @@ class Procedural:
         self.prev_obtained_reward = obtained_reward
         self.prev_predicted_reward = predicted_reward
         confidence = abs(s_a - s_b)
-        return self.predicted_category, confidence, curr_weights
+        self.max_confidence = max(confidence, self.max_confidence)
+        return self.predicted_category, abs(confidence / self.max_confidence), curr_weights

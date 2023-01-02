@@ -46,7 +46,8 @@ class Explicit:
             self.update_salience()
         self.trial = trial
         actual_category = int(trial[0])
-        predicted_category = self.predict()
+        prediction, confidence = self.predict()
+        predicted_category = prediction
         if (actual_category == predicted_category):
             self.prev_rule_index = self.current_rule_index  # same rule used
         else:
@@ -78,7 +79,7 @@ class Explicit:
             self.current_rule_index = next_rule
         self.prev_prediction = predicted_category
         self.prev_trial = trial
-        return predicted_category
+        return predicted_category, confidence
 
 
     def get_trials_to_criterion(self, threshold: int):

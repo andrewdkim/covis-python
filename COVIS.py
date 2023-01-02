@@ -18,6 +18,7 @@ class COVIS:
         self.use_procedural = use_procedural
         self.use_explicit = use_explicit
         self.results = []
+        self.model_used = []
 
         self.procedural_weight = 0.01
         self.explicit_weight = 0.99
@@ -30,13 +31,21 @@ class COVIS:
                 # competition between procedural and explicit
                 explicit_prediction, explicit_confidence = self.explicit_model.run_trial(trial)
                 procedural_prediction, procedural_confidence, weight = self.procedural_model.run_trial(trial)
-                # TODO: need to normalize confidence
 
                 # make decision
                 if self.explicit_weight * explicit_confidence > self.procedural_weight * procedural_confidence:
+                    self.model_used.append("explicit")
                     self.results.append([actual_result, explicit_prediction])
                 else:
+                    self.model_used.append("procedural")
                     self.results.append([actual_result, procedural_prediction])
+
+                print("Explicit weight: " + str(self.explicit_weight))
+                print("Explicit confidence: " + str(explicit_confidence))
+                print("Procedural weight: " + str(self.procedural_weight))
+                print("Procedural confidence: " + str(procedural_confidence))
+                print("Explicit product: " + str(self.explicit_weight * explicit_confidence))
+                print("Procedural product: " + str(self.procedural_weight * procedural_confidence))
                 
                 if explicit_prediction == actual_result:
                     # if explicit system gives correct response
@@ -47,12 +56,13 @@ class COVIS:
 
             elif self.use_explicit:
                 # use only explicit model
-                predicted_result = self.explicit_model.run_trial(trial)
+                predicted_result, confidence = self.explicit_model.run_trial(trial)
                 self.results.append([actual_result, predicted_result])
             elif self.use_procedural:
                 # use only procedural model
                 predicted_result, confidence, weight = self.procedural_model.run_trial(trial)
                 self.results.append([actual_result, predicted_result])
+        print(self.model_used)
     
     """
     Useful function for visualizing how the procedural model is training
