@@ -2,8 +2,8 @@ import numpy as np
 from COVIS import COVIS
 from Explicit import *
 from Procedural import *
-from ExplicitRules import spatial_and_orientation, spatial, orientation
-
+import pandas as pd
+import seaborn
 
 def open_data(filepath: str):
     with open(filepath, "r") as file:
@@ -12,11 +12,8 @@ def open_data(filepath: str):
             data.append(np.array(list(map(float, entry.split()))))
         return np.array(data)
 
-# if criterion is not met, then it will return None
-
 
 def generate_criterion_graph(control_trial, dual_trial):
-
     # graphing learning rate
     data = {'control': control_trial, 'dual': dual_trial}
     keys = list(data.keys())
@@ -45,29 +42,44 @@ def rescale_trials_RB_triangle(trials):
     spatial = [y + padding for y in spatial]
     return np.column_stack((trials[:, 0], orientation, spatial))
 
+def graph_trial_data(trials):
+    """
+    For visualizing triangle_v1 data
+    """
+    categories = map(lambda num: "A" if num == 1 else "B", trials[:, 0])
+    spa = trials[:, 1]
+    ori = trials[:, 2]
+    df = pd.DataFrame(dict(Spatial=spa, Orientation=ori, Categories = categories))
+    seaborn.scatterplot(x='Spatial', y='Orientation', data=df, hue='Categories')
+    plt.show()
 
 
-def main():
-    trials = open_data("data/RB_triangle_v1_large.txt")
-    rescaled_trials = rescale_trials_RB_triangle(trials)
-    covis_model = COVIS(rescaled_trials)
-    covis_model.run_trials()
-    covis_model.visualize_batch_accuracy()
+def train_procedural_model(trials, repeat_count = 1):
+    print("Training procedural model")
+    for i in range(repeat_count):
+        print("Running: " + str(i + 1) + "/" + str(repeat_count))
+        covis_model = COVIS(trials, use_explicit=False)
+        covis_model.run_trials()
+        covis_model.visualize_procedural_weights("output/" + str(i + 1) + "_procedural_striatal_weights.png")
+        covis_model.visualize_batch_accuracy("output/" + str(i + 1) + "_procedural_accuracy.png")
 
-    # criterion_threshold = 8
-    # explicit_control= Explicit(trials, [spatial, spatial_and_orientation, orientation])
-    # explicit_control.run_trials()
-    # explicit_control.generate_output("output/explicit_control_output.txt", "output/explicit_control_saliences.txt")
-    # control_trial_to_criterion = explicit_control.get_trials_to_criterion(criterion_threshold)
+def train_explicit_model(trials, repeat_count = 1):
+    print("Training explicit model")
+    for i in range(repeat_count):
+        print("Running: " + str(i + 1) + "/" + str(repeat_count))
+        covis_model = COVIS(trials, use_procedural=False)
+        covis_model.run_trials()
+        covis_model.visualize_batch_accuracy("output/" + str(i + 1) + "_explicit_accuracy.png")
 
-    # explicit_dual= Explicit(trials, gamma=20, lam=0.5, rules=[spatial, spatial_and_orientation, orientation])
-    # explicit_dual.run_trials()
-    # explicit_dual.generate_output("output/explicit_dual_output.txt", "output/explicit_dual_saliences.txt")
-    # dual_trial_to_criterion = explicit_dual.get_trials_to_criterion(criterion_threshold)
-
-    # print(control_trial_to_criterion, dual_trial_to_criterion)
-    # generate_criterion_graph(control_trial_to_criterion, dual_trial_to_criterion)
-
+def train_covis_model(trials, repeat_count = 1):
+    print("Training COVIS model")
+    for i in range(repeat_count):
+        print("Running: " + str(i + 1) + "/" + str(repeat_count))
+        covis_model = COVIS(trials)
+        covis_model.run_trials()
+        covis_model.visualize_batch_accuracy("output/" + str(i + 1) + "_covis_accuracy.png")
 
 if __name__ == "__main__":
-    main()
+    trials = open_data("data/II_triangle_v1_large.txt")
+    rescaled_trials = rescale_trials_RB_triangle(trials)
+    train_procedural_model(rescaled_trials, repeat_count=3)

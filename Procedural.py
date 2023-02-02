@@ -3,7 +3,6 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import product
-from ProceduralTestUtil import *
 
 
 class Procedural:
@@ -12,14 +11,15 @@ class Procedural:
         category_a=1,
         category_b=2,
         base_dopamine = 0.20,
-        alpha = 100,
-        alpha_w = 0.195,
-        beta_w = 0.0057,
+        alpha = 95,
+        alpha_w = 0.016, #0.016,
+        beta_w = 0.0035, #0.0035,
         gamma_w = 0.0006,
         theta_nmda = 0.0022,
         theta_ampa = 0.01,
         w_max = 1,
         sigma_p = 0.0125,
+        w_inhib = 0.350
 
     ) -> None:
         self.actual_category = None
@@ -29,6 +29,7 @@ class Procedural:
         self.alpha_w = alpha_w
         self.beta_w = beta_w
         self.gamma_w = gamma_w
+        self.w_inhib = w_inhib
 
         self.theta_nmda = theta_nmda
         self.theta_ampa = theta_ampa
@@ -70,18 +71,17 @@ class Procedural:
         return 0
 
     def sensory_activation(self, k):
-        row, col = self.sensory_coordinates[k - 1]
-        sti1, sti2 = self.stimulus[0], self.stimulus[1]
-        dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([row, col]))
+        row, col = self.sensory_coordinates[k - 1] # col must match stri
+        sti1, sti2 = self.stimulus[0], self.stimulus[1] #sti1 = stri
+        dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([col, 100 - row]))
         return exp(-(dist ** 2) / self.alpha)
 
     def striatal_activation(self, j):
         striatal_sum = 0
         for k in range(1, self.num_sensory + 1):
             w_kj = self.weights[k - 1][j - 1]
-            striatal_sum += (w_kj * self.sensory_activation(k) +
-                             np.random.normal(0, self.sigma_p))
-        return striatal_sum
+            striatal_sum += ((w_kj * self.sensory_activation(k))) 
+        return striatal_sum + np.random.normal(0, self.sigma_p)
 
     def initial_weight(self):
         def init_weight_fn(): return 0.001 + 0.0025 * random.uniform(0, 1)
@@ -121,11 +121,34 @@ class Procedural:
     def make_decision(self, s_a, s_b):
         return self.category_a if s_a > s_b else self.category_b
 
+    def graph_sensory(self, trial):
+        """
+        Just for debugging / testing - visualizes sensory model
+        """
+        print("Category: " + "A" if trial[0] == 1 else "B")
+        print("Striatal: " + str(trial[1]))
+        print("Orientation: " + str(trial[2]))
+        temp = []
+        for k in range(1, self.num_sensory + 1):  # 1, 2, ... 10000
+            temp.append(self.sensory_activation(k))
+        sensory_plot = np.array(temp).reshape((100, 100))
+        plt.imshow(sensory_plot, cmap='viridis')
+        plt.colorbar()
+        plt.show()
+
     def run_trial(self, trial):
         self.actual_category = trial[0]
         self.stimulus = trial[1:]
         s_a = self.striatal_activation(self.category_a)
         s_b = self.striatal_activation(self.category_b)
+
+        # INHIBITION MODEL (commented out)    
+        # temp = s_a
+        # s_a = s_a - self.w_inhib * s_b
+        # s_b = s_b - self.w_inhib * temp
+        # s_a = max(0, s_a)
+        # s_b = max(0, s_b)
+
         self.predicted_category = self.make_decision(s_a, s_b)
         obtained_reward = self.obtained_reward()
         predicted_reward = self.predicted_reward()

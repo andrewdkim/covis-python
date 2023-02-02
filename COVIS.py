@@ -3,7 +3,7 @@ from Procedural import Procedural
 import matplotlib.pyplot as plt
 import numpy as np
 from ExplicitRules import spatial_and_orientation, spatial, orientation
-
+from progress.bar import ChargingBar
 
 
 class COVIS:
@@ -19,13 +19,14 @@ class COVIS:
         self.use_explicit = use_explicit
         self.results = []
         self.model_used = []
-
         self.procedural_weight = 0.01
         self.explicit_weight = 0.99
+        self.procedural_output_weight = None
 
     def run_trials(self):
+        bar = ChargingBar('Running trials', max=len(self.trials), suffix='%(percent)d%%' + " [%(index)d / %(max)d]")
         for i, trial in enumerate(self.trials):
-            print(i)
+            # print(i)
             actual_result = int(trial[0])
             if self.use_procedural and self.use_explicit:
                 # competition between procedural and explicit
@@ -35,17 +36,19 @@ class COVIS:
                 # make decision
                 if self.explicit_weight * explicit_confidence > self.procedural_weight * procedural_confidence:
                     self.model_used.append("explicit")
+                    # print("explicit")
                     self.results.append([actual_result, explicit_prediction])
                 else:
                     self.model_used.append("procedural")
+                    # print("procedural")
                     self.results.append([actual_result, procedural_prediction])
 
-                print("Explicit weight: " + str(self.explicit_weight))
-                print("Explicit confidence: " + str(explicit_confidence))
-                print("Procedural weight: " + str(self.procedural_weight))
-                print("Procedural confidence: " + str(procedural_confidence))
-                print("Explicit product: " + str(self.explicit_weight * explicit_confidence))
-                print("Procedural product: " + str(self.procedural_weight * procedural_confidence))
+                # print("Explicit weight: " + str(self.explicit_weight))
+                # print("Explicit confidence: " + str(explicit_confidence))
+                # print("Procedural weight: " + str(self.procedural_weight))
+                # print("Procedural confidence: " + str(procedural_confidence))
+                # print("Explicit product: " + str(self.explicit_weight * explicit_confidence))
+                # print("Procedural product: " + str(self.procedural_weight * procedural_confidence))
                 
                 if explicit_prediction == actual_result:
                     # if explicit system gives correct response
@@ -61,25 +64,42 @@ class COVIS:
             elif self.use_procedural:
                 # use only procedural model
                 predicted_result, confidence, weight = self.procedural_model.run_trial(trial)
+                self.procedural_output_weight = weight
                 self.results.append([actual_result, predicted_result])
-        print(self.model_used)
+            bar.next()
+        bar.finish()
     
     """
     Useful function for visualizing how the procedural model is training
     """
-    def visualize_procedural_weights(self, weights):
+    def visualize_procedural_weights(self, save_path: str):
+        weights = self.procedural_output_weight
+        fig, axes = plt.subplots(nrows=1, ncols=2)
         striatal1_weights = weights[:, 0].reshape((100, 100))
         striatal2_weights = weights[:, 1].reshape((100, 100))
-        plt.imshow(striatal1_weights, cmap='viridis')
-        plt.colorbar()
-        plt.imshow(striatal2_weights, cmap='viridis')
-        plt.colorbar()
-        plt.show()
+        im = axes.flat[0].imshow(striatal1_weights, cmap='viridis', vmin= 0, vmax = 1)
+        im = axes.flat[1].imshow(striatal2_weights, cmap='viridis', vmin = 0, vmax= 1)
+        # axes.flat[0].invert_yaxis()
+        # axes.flat[1].invert_yaxis()
+        axes[0].set_title("Strital A")
+        axes[1].set_title("Strital B")
+        alpha = self.procedural_model.alpha
+        alpha_w = self.procedural_model.alpha_w
+        beta_w = self.procedural_model.beta_w
+        gamma_w = self.procedural_model.gamma_w
+        sigma_p = self.procedural_model.sigma_p
+        parameters = "Parameters - trials: " + str(len(self.trials)) + ", alpha: " + str(alpha) + ", alpha_w: " + str(alpha_w) + ", beta_w: " + str(beta_w) + ", gamma_w: " + str(gamma_w) + ", sigma_p: " + str(sigma_p)
+        fig.suptitle("Procedural Model Striatal Weights \n(" + parameters + ")")
+        fig.set_size_inches(11, 7)
+        plt.colorbar(im, ax=axes.ravel().tolist())
+        plt.savefig(save_path)
+        plt.close()
+
 
     """
     For visualizing how well the COVIS model is trained after running trials
     """
-    def visualize_batch_accuracy(self, batch_size=50):
+    def visualize_batch_accuracy(self, save_path: str, batch_size=25):
         #graphing learning rate
         results = np.array(self.results)
         num_batch = int(len(results) / batch_size)
@@ -100,7 +120,15 @@ class COVIS:
         plt.plot(x, y)
         plt.xlabel("Batch")  # add X-axis label
         plt.ylabel("Accuracy")  # add Y-axis label
-        plt.title("COVIS Learning Curve of Each Batch and its Accuracy")  # add title
+
+        if self.use_explicit and self.use_explicit:
+            plt.title("COVIS Model Accuracy Per Batch (Batch Size = " + str(batch_size) + ")")
+        elif self.use_explicit:
+            plt.title("Explicit Model Accuracy Per Batch (Batch Size = " + str(batch_size) + ")")
+        elif self.use_procedural:
+            plt.title("Procedural Model Accuracy Per Batch (Batch Size = " + str(batch_size) + ")")
         plt.xticks(np.arange(len(x)))
-        plt.show()
+        plt.savefig(save_path)
+        plt.close()
+
 
