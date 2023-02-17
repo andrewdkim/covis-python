@@ -19,7 +19,6 @@ class Procedural:
         theta_ampa = 0.01,
         w_max = 1,
         sigma_p = 0.0125,
-        w_inhib = 0.350
 
     ) -> None:
         self.actual_category = None
@@ -29,7 +28,7 @@ class Procedural:
         self.alpha_w = alpha_w
         self.beta_w = beta_w
         self.gamma_w = gamma_w
-        self.w_inhib = w_inhib
+        # self.w_inhib = w_inhib
 
         self.theta_nmda = theta_nmda
         self.theta_ampa = theta_ampa
@@ -81,6 +80,7 @@ class Procedural:
         for k in range(1, self.num_sensory + 1):
             w_kj = self.weights[k - 1][j - 1]
             striatal_sum += ((w_kj * self.sensory_activation(k))) 
+        # print(str(j) + ": " + str(striatal_sum))
         return striatal_sum + np.random.normal(0, self.sigma_p)
 
     def initial_weight(self):
@@ -92,30 +92,29 @@ class Procedural:
         return weights
 
     def next_weight(self, curr_weight, s_a, s_b, dopamine):
-        new_weights = np.zeros((self.num_sensory, self.num_striatal))
+        new_weights = np.copy(curr_weight)
         striatal_activations = [s_a, s_b]
         d_n = dopamine
+        predicted_category_index = self.predicted_category - 1
         for k in range(1, self.num_sensory + 1):  # 1, 2, ... 10000
             i_k = self.sensory_activation(k)
-            for j in range(1, self.num_striatal + 1):  # 1, 2
-                s_j = striatal_activations[j - 1]
-                curr_w_kj = curr_weight[k - 1][j - 1]
-                first_term = self.alpha_w * i_k * \
-                    max(s_j - self.theta_nmda, 0) * max(d_n -
-                                                        self.base_dopamine, 0) * (self.w_max - curr_w_kj)
-                second_term = self.beta_w * i_k * \
-                    max(s_j - self.theta_nmda, 0) * \
-                    max(self.base_dopamine - d_n, 0) * curr_w_kj
-                third_term = self.gamma_w * i_k * \
-                    max(max(self.theta_nmda - s_j, 0) -
-                        self.theta_ampa, 0) * curr_w_kj
-
-                new_weight = curr_w_kj + first_term - second_term - third_term
-                if new_weight <= 0:
-                    new_weight = 0
-                elif new_weight >= 1:
-                    new_weight = 1
-                new_weights[k - 1][j - 1] = new_weight
+            s_j = striatal_activations[predicted_category_index] #inhibit other category from updates
+            curr_w_kj = curr_weight[k - 1][predicted_category_index]
+            first_term = self.alpha_w * i_k * \
+                max(s_j - self.theta_nmda, 0) * max(d_n -
+                                                    self.base_dopamine, 0) * (self.w_max - curr_w_kj)
+            second_term = self.beta_w * i_k * \
+                max(s_j - self.theta_nmda, 0) * \
+                max(self.base_dopamine - d_n, 0) * curr_w_kj
+            third_term = self.gamma_w * i_k * \
+                max(max(self.theta_nmda - s_j, 0) -
+                    self.theta_ampa, 0) * curr_w_kj
+            new_weight = curr_w_kj + first_term - second_term - third_term
+            if new_weight <= 0:
+                new_weight = 0
+            elif new_weight >= 1:
+                new_weight = 1
+            new_weights[k - 1][predicted_category_index] = new_weight
         return new_weights
 
     def make_decision(self, s_a, s_b):
@@ -139,16 +138,11 @@ class Procedural:
     def run_trial(self, trial):
         self.actual_category = trial[0]
         self.stimulus = trial[1:]
+        # self.graph_sensory(trial)
         s_a = self.striatal_activation(self.category_a)
         s_b = self.striatal_activation(self.category_b)
-
-        # INHIBITION MODEL (commented out)    
-        # temp = s_a
-        # s_a = s_a - self.w_inhib * s_b
-        # s_b = s_b - self.w_inhib * temp
-        # s_a = max(0, s_a)
-        # s_b = max(0, s_b)
-
+        # print( "s_a: " + str(s_a))
+        # print( "s_b: " + str(s_b))
         self.predicted_category = self.make_decision(s_a, s_b)
         obtained_reward = self.obtained_reward()
         predicted_reward = self.predicted_reward()
@@ -159,4 +153,4 @@ class Procedural:
         self.prev_predicted_reward = predicted_reward
         confidence = abs(s_a - s_b)
         self.max_confidence = max(confidence, self.max_confidence)
-        return self.predicted_category, abs(confidence / self.max_confidence), curr_weights
+        return self.predicted_category, confidence, curr_weights

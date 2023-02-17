@@ -26,7 +26,7 @@ def generate_criterion_graph(control_trial, dual_trial):
     plt.show()
 
 
-def rescale_trials_RB_triangle(trials):
+def rescale_trials(trials):
     orientation = trials[:, 1]  # "x"
     spatial = trials[:, 2]  # "y"
     min_orientation = abs(min(orientation))
@@ -81,5 +81,5 @@ def train_covis_model(trials, repeat_count = 1):
 
 if __name__ == "__main__":
     trials = open_data("data/II_triangle_v1_large.txt")
-    rescaled_trials = rescale_trials_RB_triangle(trials)
-    train_procedural_model(rescaled_trials, repeat_count=3)
+    rescaled_trials = rescale_trials(trials)
+    train_covis_model(rescaled_trials, repeat_count=1)

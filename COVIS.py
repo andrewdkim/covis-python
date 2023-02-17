@@ -26,29 +26,23 @@ class COVIS:
     def run_trials(self):
         bar = ChargingBar('Running trials', max=len(self.trials), suffix='%(percent)d%%' + " [%(index)d / %(max)d]")
         for i, trial in enumerate(self.trials):
-            # print(i)
             actual_result = int(trial[0])
             if self.use_procedural and self.use_explicit:
                 # competition between procedural and explicit
                 explicit_prediction, explicit_confidence = self.explicit_model.run_trial(trial)
                 procedural_prediction, procedural_confidence, weight = self.procedural_model.run_trial(trial)
 
+                print("confidence: Procedural: " + str(procedural_confidence) + ", Explicit: " + str(explicit_confidence))
+
                 # make decision
-                if self.explicit_weight * explicit_confidence > self.procedural_weight * procedural_confidence:
+                if self.explicit_weight * abs(explicit_confidence) > self.procedural_weight * abs(procedural_confidence):
                     self.model_used.append("explicit")
-                    # print("explicit")
+                    print("explicit - correct" if explicit_prediction == actual_result else "explicit - incorrect")
                     self.results.append([actual_result, explicit_prediction])
                 else:
                     self.model_used.append("procedural")
-                    # print("procedural")
+                    print("procedural - correct" if procedural_prediction == actual_result else "procedural - incorrect")
                     self.results.append([actual_result, procedural_prediction])
-
-                # print("Explicit weight: " + str(self.explicit_weight))
-                # print("Explicit confidence: " + str(explicit_confidence))
-                # print("Procedural weight: " + str(self.procedural_weight))
-                # print("Procedural confidence: " + str(procedural_confidence))
-                # print("Explicit product: " + str(self.explicit_weight * explicit_confidence))
-                # print("Procedural product: " + str(self.procedural_weight * procedural_confidence))
                 
                 if explicit_prediction == actual_result:
                     # if explicit system gives correct response
@@ -79,8 +73,6 @@ class COVIS:
         striatal2_weights = weights[:, 1].reshape((100, 100))
         im = axes.flat[0].imshow(striatal1_weights, cmap='viridis', vmin= 0, vmax = 1)
         im = axes.flat[1].imshow(striatal2_weights, cmap='viridis', vmin = 0, vmax= 1)
-        # axes.flat[0].invert_yaxis()
-        # axes.flat[1].invert_yaxis()
         axes[0].set_title("Strital A")
         axes[1].set_title("Strital B")
         alpha = self.procedural_model.alpha
@@ -99,20 +91,19 @@ class COVIS:
     """
     For visualizing how well the COVIS model is trained after running trials
     """
-    def visualize_batch_accuracy(self, save_path: str, batch_size=25):
+    def visualize_batch_accuracy(self, save_path: str, batch_size=50):
         #graphing learning rate
         results = np.array(self.results)
         num_batch = int(len(results) / batch_size)
         x = []
         y = []
         for i in range(num_batch):
-            batch = results[i : i + batch_size]
+            batch = results[i * batch_size : i * batch_size + batch_size]
             actual_categories = batch[:, 0]
             predicted_categories= batch[:, 1]
             num_correct = 0
             for j,  predicted_category in enumerate(predicted_categories):
-                actual_category = actual_categories[j]
-                if predicted_category == actual_category:
+                if predicted_category == actual_categories[j]:
                     num_correct += 1
             x.append(i)
             y.append(num_correct / batch_size)
