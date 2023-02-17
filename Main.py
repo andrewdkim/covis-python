@@ -82,4 +82,4 @@ def train_covis_model(trials, repeat_count = 1):
 if __name__ == "__main__":
     trials = open_data("data/II_triangle_v1_large.txt")
     rescaled_trials = rescale_trials(trials)
-    train_covis_model(rescaled_trials, repeat_count=1)
+    train_explicit_model(rescaled_trials, repeat_count=1)

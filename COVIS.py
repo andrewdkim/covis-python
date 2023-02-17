@@ -32,16 +32,16 @@ class COVIS:
                 explicit_prediction, explicit_confidence = self.explicit_model.run_trial(trial)
                 procedural_prediction, procedural_confidence, weight = self.procedural_model.run_trial(trial)
 
-                print("confidence: Procedural: " + str(procedural_confidence) + ", Explicit: " + str(explicit_confidence))
+                # print("confidence: Procedural: " + str(procedural_confidence) + ", Explicit: " + str(explicit_confidence))
 
                 # make decision
                 if self.explicit_weight * abs(explicit_confidence) > self.procedural_weight * abs(procedural_confidence):
                     self.model_used.append("explicit")
-                    print("explicit - correct" if explicit_prediction == actual_result else "explicit - incorrect")
+                    # print("explicit - correct" if explicit_prediction == actual_result else "explicit - incorrect")
                     self.results.append([actual_result, explicit_prediction])
                 else:
                     self.model_used.append("procedural")
-                    print("procedural - correct" if procedural_prediction == actual_result else "procedural - incorrect")
+                    # print("procedural - correct" if procedural_prediction == actual_result else "procedural - incorrect")
                     self.results.append([actual_result, procedural_prediction])
                 
                 if explicit_prediction == actual_result:
@@ -112,7 +112,7 @@ class COVIS:
         plt.xlabel("Batch")  # add X-axis label
         plt.ylabel("Accuracy")  # add Y-axis label
 
-        if self.use_explicit and self.use_explicit:
+        if self.use_explicit and self.use_procedural:
             plt.title("COVIS Model Accuracy Per Batch (Batch Size = " + str(batch_size) + ")")
         elif self.use_explicit:
             plt.title("Explicit Model Accuracy Per Batch (Batch Size = " + str(batch_size) + ")")
