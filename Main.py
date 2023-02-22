@@ -78,8 +78,9 @@ def train_covis_model(trials, repeat_count = 1):
         covis_model = COVIS(trials)
         covis_model.run_trials()
         covis_model.visualize_batch_accuracy("output/" + str(i + 1) + "_covis_accuracy.png")
+        covis_model.visualize_procedural_usage("output/" + str(i + 1) + "_procedural_usage.png")
 
 if __name__ == "__main__":
     trials = open_data("data/II_triangle_v1_large.txt")
     rescaled_trials = rescale_trials(trials)
-    train_explicit_model(rescaled_trials, repeat_count=1)
+    train_covis_model(rescaled_trials, repeat_count=1)

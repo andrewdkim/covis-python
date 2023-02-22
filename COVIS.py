@@ -37,11 +37,9 @@ class COVIS:
                 # make decision
                 if self.explicit_weight * abs(explicit_confidence) > self.procedural_weight * abs(procedural_confidence):
                     self.model_used.append("explicit")
-                    # print("explicit - correct" if explicit_prediction == actual_result else "explicit - incorrect")
                     self.results.append([actual_result, explicit_prediction])
                 else:
                     self.model_used.append("procedural")
-                    # print("procedural - correct" if procedural_prediction == actual_result else "procedural - incorrect")
                     self.results.append([actual_result, procedural_prediction])
                 
                 if explicit_prediction == actual_result:
@@ -54,11 +52,13 @@ class COVIS:
             elif self.use_explicit:
                 # use only explicit model
                 predicted_result, confidence = self.explicit_model.run_trial(trial)
+                self.model_used.append("explicit")
                 self.results.append([actual_result, predicted_result])
             elif self.use_procedural:
                 # use only procedural model
                 predicted_result, confidence, weight = self.procedural_model.run_trial(trial)
                 self.procedural_output_weight = weight
+                self.model_used.append("procedural")
                 self.results.append([actual_result, predicted_result])
             bar.next()
         bar.finish()
@@ -84,6 +84,30 @@ class COVIS:
         fig.suptitle("Procedural Model Striatal Weights \n(" + parameters + ")")
         fig.set_size_inches(11, 7)
         plt.colorbar(im, ax=axes.ravel().tolist())
+        plt.savefig(save_path)
+        plt.close()
+    
+
+    def visualize_procedural_usage(self, save_path: str, batch_size = 50):
+        #graphing learning rate
+        model_used = np.array(self.model_used)
+        num_batch = int(len(model_used) / batch_size)
+        x = []
+        y = []
+        for i in range(num_batch):
+            batch = model_used[i * batch_size : i * batch_size + batch_size]
+            num_procedural = 0
+            for j,  model in enumerate(batch):
+                if model == "procedural":
+                    num_procedural += 1
+            x.append(i)
+            y.append(num_procedural / batch_size)
+
+        plt.plot(x, y)
+        plt.xlabel("Batch")  # add X-axis label
+        plt.ylabel("Procedural Model Usage")  # add Y-axis label
+        plt.title("Procedural Model Usage Per Batch (Batch Size = " + str(batch_size) + ")")
+        plt.xticks(np.arange(len(x)))
         plt.savefig(save_path)
         plt.close()
 
