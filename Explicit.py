@@ -30,7 +30,7 @@ class Explicit:
         return np.random.poisson(lam=self.lam)
 
     def predict(self):
-        return self.rules[self.current_rule_index](self.trial)
+        return self.rules[self.current_rule_index](self.feature)
 
     # should only be called in n => 2
 
@@ -41,14 +41,13 @@ class Explicit:
         else:
             self.saliences[self.prev_rule_index] = self.saliences[self.prev_rule_index] - self.delta_e
     
-    def run_trial(self, trial):
+    def run_trial(self, feature, label):
         if self.prev_rule_index != None:
             self.update_salience()
-        self.trial = trial
-        actual_category = int(trial[0])
+        self.feature = feature
         prediction, confidence = self.predict()
         predicted_category = prediction
-        if (actual_category == predicted_category):
+        if (label == predicted_category):
             self.prev_rule_index = self.current_rule_index  # same rule used
         else:
             # for rule Ri that was active on trial n
@@ -78,19 +77,5 @@ class Explicit:
             next_rule = np.argmax(whiteList)
             self.current_rule_index = next_rule
         self.prev_prediction = predicted_category
-        self.prev_trial = trial
+        self.prev_trial = feature
         return predicted_category, confidence
-
-
-    def get_trials_to_criterion(self, threshold: int):
-        output = np.append(self.trials, self.output, 1)
-        seq_trials = 0
-        for i, output_row in enumerate(output):
-            true_category, _, _, pred_category, _ = output_row
-            if true_category == pred_category:
-                seq_trials += 1
-                if seq_trials == threshold:
-                    return i + 1 
-            else:
-                seq_trials = 0
-        return 0

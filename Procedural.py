@@ -11,10 +11,10 @@ class Procedural:
         category_a=1,
         category_b=2,
         base_dopamine = 0.20,
-        alpha = 95,
-        alpha_w = 0.016, #0.016,
-        beta_w = 0.0035, #0.0035,
-        gamma_w = 0.0006,
+        alpha = 75,
+        alpha_w = 0.016, #0.0005, #0.016,
+        beta_w = 0.0035, #0.0001, #0.0035,
+        gamma_w = 0.0005, # 0.0001,
         theta_nmda = 0.0022,
         theta_ampa = 0.01,
         w_max = 1,
@@ -22,7 +22,6 @@ class Procedural:
 
     ) -> None:
         self.actual_category = None
-        self.stimulus = []
         self.base_dopamine = base_dopamine
         self.alpha = alpha
         self.alpha_w = alpha_w
@@ -40,11 +39,12 @@ class Procedural:
 
         self.num_striatal = 2
         self.num_sensory = 10000
+
         self.sensory_coordinates = list(product(range(1, 101), range(1, 101)))
 
         self.prev_predicted_reward = 0  # initially, p_0 = 0
         self.prev_obtained_reward = 0
-        self.weights = self.initial_weight()
+        self.weights = None
         self.predicted_category = None
         self.max_confidence = -np.inf
 
@@ -69,18 +69,20 @@ class Procedural:
             return 0.8 * rpe + self.base_dopamine
         return 0
 
-    def sensory_activation(self, k):
-        row, col = self.sensory_coordinates[k - 1] # col must match stri
-        sti1, sti2 = self.stimulus[0], self.stimulus[1] #sti1 = stri
-        dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([col, 100 - row]))
-        return exp(-(dist ** 2) / self.alpha)
-
+    def generate_sensory(self, feature):
+        res = []
+        for k in range(self.num_sensory):
+            row, col = self.sensory_coordinates[k - 1] # col must match stri
+            sti1, sti2 = feature[0], feature[1] #sti1 = stri
+            dist = np.linalg.norm(np.array([sti1, sti2]) - np.array([col, 100 - row]))
+            res.append(exp(-(dist ** 2) / self.alpha))
+        return res
+    
     def striatal_activation(self, j):
         striatal_sum = 0
         for k in range(1, self.num_sensory + 1):
             w_kj = self.weights[k - 1][j - 1]
-            striatal_sum += ((w_kj * self.sensory_activation(k))) 
-        # print(str(j) + ": " + str(striatal_sum))
+            striatal_sum += ((w_kj * self.sensory[k - 1])) 
         return striatal_sum + np.random.normal(0, self.sigma_p)
 
     def initial_weight(self):
@@ -97,7 +99,7 @@ class Procedural:
         d_n = dopamine
         predicted_category_index = self.predicted_category - 1
         for k in range(1, self.num_sensory + 1):  # 1, 2, ... 10000
-            i_k = self.sensory_activation(k)
+            i_k = self.sensory[k - 1]
             s_j = striatal_activations[predicted_category_index] #inhibit other category from updates
             curr_w_kj = curr_weight[k - 1][predicted_category_index]
             first_term = self.alpha_w * i_k * \
@@ -120,29 +122,35 @@ class Procedural:
     def make_decision(self, s_a, s_b):
         return self.category_a if s_a > s_b else self.category_b
 
-    def graph_sensory(self, trial):
-        """
-        Just for debugging / testing - visualizes sensory model
-        """
-        print("Category: " + "A" if trial[0] == 1 else "B")
-        print("Striatal: " + str(trial[1]))
-        print("Orientation: " + str(trial[2]))
-        temp = []
-        for k in range(1, self.num_sensory + 1):  # 1, 2, ... 10000
-            temp.append(self.sensory_activation(k))
-        sensory_plot = np.array(temp).reshape((100, 100))
-        plt.imshow(sensory_plot, cmap='viridis')
-        plt.colorbar()
-        plt.show()
+    # def graph_sensory(self, trial):
+    #     """
+    #     Just for debugging / testing - visualizes sensory model
+    #     """
+    #     print("Category: " + "A" if trial[0] == 1 else "B")
+    #     print("Striatal: " + str(trial[1]))
+    #     print("Orientation: " + str(trial[2]))
+    #     temp = []
+    #     for k in range(1, self.num_sensory + 1):  # 1, 2, ... 10000
+    #         temp.append(self.sensory_activation(k))
+    #     sensory_plot = np.array(temp).reshape((100, 100))
+    #     plt.imshow(sensory_plot, cmap='viridis')
+    #     plt.colorbar()
+    #     plt.show()
 
-    def run_trial(self, trial):
-        self.actual_category = trial[0]
-        self.stimulus = trial[1:]
+    def run_trial(self, feature, label, is_vgg_feature = False):
+        self.actual_category = label
+        if is_vgg_feature:
+            self.num_sensory = len(feature)
+            self.sensory = feature
+        else:
+            self.num_sensory = 10000
+            self.sensory = self.generate_sensory(feature)
+
+        if self.weights is None:
+            self.weights = self.initial_weight()
         # self.graph_sensory(trial)
         s_a = self.striatal_activation(self.category_a)
         s_b = self.striatal_activation(self.category_b)
-        # print( "s_a: " + str(s_a))
-        # print( "s_b: " + str(s_b))
         self.predicted_category = self.make_decision(s_a, s_b)
         obtained_reward = self.obtained_reward()
         predicted_reward = self.predicted_reward()
